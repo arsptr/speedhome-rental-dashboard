@@ -100,6 +100,10 @@ alter table public.search_sessions enable row level security;
 alter table public.property_listings enable row level security;
 alter table public.search_statistics enable row level security;
 
+drop policy if exists "Allow anon read search_sessions" on public.search_sessions;
+drop policy if exists "Allow anon read property_listings" on public.property_listings;
+drop policy if exists "Allow anon read search_statistics" on public.search_statistics;
+
 create policy "Allow anon read search_sessions"
   on public.search_sessions
   for select

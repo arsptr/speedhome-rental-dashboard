@@ -8,7 +8,16 @@ import {
   parsePropertySize,
   parsePropertyType,
 } from '@/lib/utils';
+import { buildGroupedScrapeStatistics } from '@/lib/analytics/statistics';
 import type { ScrapeResult, ScrapedProperty } from '@/types/scraping';
+
+const SPEEDHOME_BASE_URL = 'https://www.speedhome.com.my';
+
+export function buildSpeedhomeSearchUrl(query: string): string {
+  const trimmed = query.trim();
+  const encoded = encodeURIComponent(trimmed);
+  return `${SPEEDHOME_BASE_URL}/search?query=${encoded}`;
+}
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -115,7 +124,7 @@ async function scrapeListingPage(listingUrl: string): Promise<ScrapedProperty> {
   return buildListingFromPage($, targetUrl.toString());
 }
 
-export async function scrapeSpeedhomePage(url: string): Promise<ScrapeResult> {
+export async function scrapeSpeedhomePage(url: string, mode: 'url' | 'area' = 'url'): Promise<ScrapeResult> {
   const normalizedUrl = new URL(url).toString();
   const targetUrl = new URL(normalizedUrl);
 
@@ -155,12 +164,15 @@ export async function scrapeSpeedhomePage(url: string): Promise<ScrapeResult> {
     items.push(buildListingFromPage($, targetUrl.toString()));
   }
 
+  const statistics = buildGroupedScrapeStatistics(items);
+
   return {
-    mode: 'url',
+    mode,
     query: targetUrl.toString(),
     url: targetUrl.toString(),
     listingCount: items.length,
     listings: items,
     fetchedAt: new Date().toISOString(),
+    statistics,
   };
 }

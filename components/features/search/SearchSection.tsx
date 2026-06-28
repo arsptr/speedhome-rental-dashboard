@@ -100,20 +100,18 @@ export function SearchSection() {
         throw new Error(health.supabase.message ?? 'Supabase connection failed.');
       }
 
-      if (form.mode === 'url') {
-        const scrapeResponse = await fetch('/api/scrape', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'url', query }),
-        });
+      const scrapeResponse = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: form.mode, query }),
+      });
 
-        const data = await scrapeResponse.json();
-        if (!scrapeResponse.ok) {
-          throw new Error(data?.error || 'Unable to scrape the provided URL.');
-        }
-
-        setScrapeResult(data);
+      const data = await scrapeResponse.json();
+      if (!scrapeResponse.ok) {
+        throw new Error(data?.error || 'Unable to scrape the provided query.');
       }
+
+      setScrapeResult(data);
 
       setResult({ mode: form.mode, query });
       setStatus('success');
@@ -217,6 +215,50 @@ export function SearchSection() {
                   <p className="text-2xl font-semibold">{scrapeResult.mode.toUpperCase()}</p>
                 </div>
               </div>
+              {scrapeResult.statistics && scrapeResult.statistics.length > 0 ? (
+                <div className="mt-6 space-y-4">
+                  {scrapeResult.statistics.find((stat) => stat.propertyType === 'all') ? (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {[
+                        { label: 'Average price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.averagePrice },
+                        { label: 'Median price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.medianPrice },
+                        { label: 'Mode price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.modePrice },
+                        { label: 'Fair price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.fairPrice },
+                        { label: 'Average size', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.averageSizeSqft },
+                      ].map((stat) => (
+                        <div key={stat.label} className="rounded-lg border border-muted p-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
+                          <p className="text-2xl font-semibold">
+                            {stat.value !== null && stat.value !== undefined ? (
+                              stat.label === 'Average size' ? `${stat.value} sqft` : `RM ${stat.value}`
+                            ) : (
+                              'N/A'
+                            )}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {scrapeResult.statistics.filter((stat) => stat.propertyType !== 'all').length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold">Grouped statistics by property type</p>
+                      <div className="grid gap-3">
+                        {scrapeResult.statistics
+                          .filter((stat) => stat.propertyType !== 'all')
+                          .map((stat) => (
+                            <div key={stat.propertyType} className="rounded-lg border border-muted p-4">
+                              <p className="text-sm font-semibold">{stat.propertyType}</p>
+                              <p className="text-xs text-muted-foreground">Listings: {stat.listingCount}</p>
+                              <p className="text-sm">Avg: {stat.averagePrice !== null ? `RM ${stat.averagePrice}` : 'N/A'}</p>
+                              <p className="text-sm">Median: {stat.medianPrice !== null ? `RM ${stat.medianPrice}` : 'N/A'}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {scrapeResult.listings.slice(0, 3).map((listing) => (
                 <div key={listing.listing_url} className="rounded-lg border border-muted p-4">
                   <p className="text-sm font-semibold text-foreground break-all">{listing.title}</p>

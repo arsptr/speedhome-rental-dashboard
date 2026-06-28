@@ -3,7 +3,7 @@ export const APP_NAME = 'SPEEDHOME Rental Price Dashboard';
 export const APP_DESCRIPTION =
   'Collect publicly available SPEEDHOME rental listings and transform them into pricing insights.';
 
-export const SPEEDHOME_HOSTS = ['speedhome.com.my', 'www.speedhome.com.my'] as const;
+export const SPEEDHOME_HOSTS = ['speedhome.com.my', 'www.speedhome.com.my', 'speedhome.com','www.speedhome.com'] as const;
 
 export const AREA_SUGGESTIONS = [
   'Mont Kiara',
