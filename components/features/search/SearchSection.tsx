@@ -19,6 +19,11 @@ import type { SearchFormState, SearchMode, SearchResult, SearchStatus } from '@/
 import { getSearchQuery } from '@/types/search';
 import type { ScrapeResult, ScrapedProperty } from '@/types/scraping';
 import { cn } from '@/lib/utils';
+import {
+  downloadScrapeResultCsv,
+  downloadScrapeResultExcel,
+  downloadScrapeStatisticsCsv,
+} from '@/lib/exportData';
 
 const INITIAL_FORM: SearchFormState = {
   mode: 'area',
@@ -168,6 +173,32 @@ export function SearchSection() {
     });
   }, [scrapeResult, sortBy, sortDirection, filterType]);
 
+  const exportButtons = (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => scrapeResult && downloadScrapeResultCsv(scrapeResult, sortedListings)}
+      >
+        Download listings CSV
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => scrapeResult && downloadScrapeStatisticsCsv(scrapeResult, scrapeResult.statistics)}
+      >
+        Download statistics CSV
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => scrapeResult && downloadScrapeResultExcel(scrapeResult, sortedListings)}
+      >
+        Download Excel
+      </Button>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <Card>
@@ -258,6 +289,10 @@ export function SearchSection() {
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Visible listings</p>
                   <p className="text-2xl font-semibold">{sortedListings.length}</p>
                 </div>
+              </div>
+
+              <div className="mt-4">
+                {exportButtons}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
