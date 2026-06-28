@@ -67,10 +67,13 @@ docs/             Project documentation
 
 ## Supabase Setup
 
-1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Copy the project URL and anon key into `.env.local`.
-3. Copy the service role key for server-side operations (keep secret).
-4. Database schema will be added in Phase 4.
+See **[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)** for the full guide.
+
+Quick steps:
+
+1. Create a project at [supabase.com/dashboard/new](https://supabase.com/dashboard/new).
+2. Run `supabase/migrations/20250627000000_initial_schema.sql` in the SQL Editor.
+3. Copy URL, anon key, and service role key into `.env.local` and Vercel env vars.
 
 ## Deploy to Vercel
 
