@@ -1,11 +1,26 @@
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  const url = readEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+  if (!url || !anonKey) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.endsWith('.supabase.co');
+  } catch {
+    return false;
+  }
 }
 
 export function getSupabaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = readEnv('NEXT_PUBLIC_SUPABASE_URL');
 
   if (!url) {
     throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL');
@@ -15,7 +30,7 @@ export function getSupabaseUrl(): string {
 }
 
 export function getSupabaseAnonKey(): string {
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
   if (!key) {
     throw new Error('Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY');
@@ -25,7 +40,7 @@ export function getSupabaseAnonKey(): string {
 }
 
 export function getSupabaseServiceRoleKey(): string {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = readEnv('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!key) {
     throw new Error('Missing environment variable: SUPABASE_SERVICE_ROLE_KEY');

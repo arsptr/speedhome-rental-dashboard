@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 
-import { isSupabaseConfigured } from '@/lib/supabase/config';
+import { checkSupabaseHealth } from '@/lib/supabase/health';
 
 export async function GET() {
+  const supabase = await checkSupabaseHealth();
+
   return NextResponse.json({
     status: 'ok',
-    supabase: isSupabaseConfigured() ? 'configured' : 'pending',
+    supabase,
     timestamp: new Date().toISOString(),
   });
 }
