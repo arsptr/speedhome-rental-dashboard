@@ -15,6 +15,7 @@ import {
 } from '@/lib/validators/speedhomeUrl';
 import type { SearchFormState, SearchMode, SearchResult, SearchStatus } from '@/types/search';
 import { getSearchQuery } from '@/types/search';
+import type { ScrapeResult } from '@/types/scraping';
 import { cn } from '@/lib/utils';
 
 const INITIAL_FORM: SearchFormState = {
@@ -28,6 +29,7 @@ export function SearchSection() {
   const [status, setStatus] = useState<SearchStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
+  const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null);
 
   const isSubmitting = status === 'loading';
 
@@ -66,6 +68,7 @@ export function SearchSection() {
       setStatus('error');
       setErrorMessage(validationError);
       setResult(null);
+      setScrapeResult(null);
       return;
     }
 
@@ -75,6 +78,7 @@ export function SearchSection() {
     setStatus('loading');
     setErrorMessage(null);
     setResult(null);
+    setScrapeResult(null);
 
     try {
       const response = await fetch('/api/health');
@@ -94,6 +98,21 @@ export function SearchSection() {
 
       if (health.supabase?.status === 'error') {
         throw new Error(health.supabase.message ?? 'Supabase connection failed.');
+      }
+
+      if (form.mode === 'url') {
+        const scrapeResponse = await fetch('/api/scrape', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'url', query }),
+        });
+
+        const data = await scrapeResponse.json();
+        if (!scrapeResponse.ok) {
+          throw new Error(data?.error || 'Unable to scrape the provided URL.');
+        }
+
+        setScrapeResult(data);
       }
 
       setResult({ mode: form.mode, query });
@@ -172,7 +191,44 @@ export function SearchSection() {
         <ErrorState message={errorMessage} onRetry={handleRetry} />
       ) : null}
 
-      {status === 'success' && result ? (
+      {status === 'success' && scrapeResult ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Scrape Results</CardTitle>
+            <CardDescription>
+              Found {scrapeResult.listingCount} listing{scrapeResult.listingCount === 1 ? '' : 's'} from the scraped URL.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                URL: <span className="text-foreground font-medium break-all">{scrapeResult.url}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Scraped at: <span className="text-foreground font-medium">{new Date(scrapeResult.fetchedAt).toLocaleString()}</span>
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-muted p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Listing count</p>
+                  <p className="text-2xl font-semibold">{scrapeResult.listingCount}</p>
+                </div>
+                <div className="rounded-lg border border-muted p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Query type</p>
+                  <p className="text-2xl font-semibold">{scrapeResult.mode.toUpperCase()}</p>
+                </div>
+              </div>
+              {scrapeResult.listings.slice(0, 3).map((listing) => (
+                <div key={listing.listing_url} className="rounded-lg border border-muted p-4">
+                  <p className="text-sm font-semibold text-foreground break-all">{listing.title}</p>
+                  <p className="text-xs text-muted-foreground">{listing.listing_url}</p>
+                  <p className="text-sm">Price: {listing.monthly_price ? `RM ${listing.monthly_price}` : 'Not Available'}</p>
+                  <p className="text-sm">Bedrooms: {listing.bedrooms}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : status === 'success' && result ? (
         <EmptyState
           title="Search ready — scraping starts in Phase 3"
           message={`Your ${result.mode === 'url' ? 'URL' : 'area'} search for "${result.query}" is valid. Listing collection and dashboard results will be connected in the next phase.`}
