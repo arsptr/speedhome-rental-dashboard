@@ -1,4 +1,5 @@
 import type { SearchMode } from '@/types/search';
+import type { ScrapeStatistics } from '@/types/analytics';
 
 export type ScrapedProperty = {
   listing_url: string;
@@ -28,4 +29,5 @@ export type ScrapeResult = {
   listingCount: number;
   listings: ScrapedProperty[];
   fetchedAt: string;
+  statistics: ScrapeStatistics[];
 };

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { EmptyState } from '@/components/features/common/EmptyState';
 import { ErrorState } from '@/components/features/common/ErrorState';
 import { LoadingState } from '@/components/features/common/LoadingState';
 import { AreaSearchInput } from '@/components/features/search/AreaSearchInput';
+import { ListingTable } from '@/components/features/search/ListingTable';
+import { StatisticsSummary } from '@/components/features/search/StatisticsSummary';
 import { UrlInput } from '@/components/features/search/UrlInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +17,7 @@ import {
 } from '@/lib/validators/speedhomeUrl';
 import type { SearchFormState, SearchMode, SearchResult, SearchStatus } from '@/types/search';
 import { getSearchQuery } from '@/types/search';
-import type { ScrapeResult } from '@/types/scraping';
+import type { ScrapeResult, ScrapedProperty } from '@/types/scraping';
 import { cn } from '@/lib/utils';
 
 const INITIAL_FORM: SearchFormState = {
@@ -30,6 +32,9 @@ export function SearchSection() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null);
+  const [sortBy, setSortBy] = useState<'price' | 'area' | 'type'>('price');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filterType, setFilterType] = useState<'all' | string>('all');
 
   const isSubmitting = status === 'loading';
 
@@ -128,6 +133,41 @@ export function SearchSection() {
     setErrorMessage(null);
   }
 
+  const propertyTypes = useMemo(() => {
+    if (!scrapeResult) return ['all'];
+    const types = Array.from(
+      new Set(scrapeResult.listings.map((listing) => listing.property_type).filter(Boolean)),
+    );
+    return ['all', ...types.sort()];
+  }, [scrapeResult]);
+
+  const sortedListings = useMemo((): ScrapedProperty[] => {
+    if (!scrapeResult) return [];
+
+    let listings = [...scrapeResult.listings];
+    if (filterType !== 'all') {
+      listings = listings.filter((listing) => listing.property_type === filterType);
+    }
+
+    return listings.sort((a, b) => {
+      if (sortBy === 'price') {
+        const aPrice = a.monthly_price ?? 0;
+        const bPrice = b.monthly_price ?? 0;
+        return sortDirection === 'asc' ? aPrice - bPrice : bPrice - aPrice;
+      }
+
+      if (sortBy === 'area') {
+        return sortDirection === 'asc'
+          ? a.area.localeCompare(b.area)
+          : b.area.localeCompare(a.area);
+      }
+
+      return sortDirection === 'asc'
+        ? a.property_type.localeCompare(b.property_type)
+        : b.property_type.localeCompare(a.property_type);
+    });
+  }, [scrapeResult, sortBy, sortDirection, filterType]);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -205,7 +245,7 @@ export function SearchSection() {
               <p className="text-sm text-muted-foreground">
                 Scraped at: <span className="text-foreground font-medium">{new Date(scrapeResult.fetchedAt).toLocaleString()}</span>
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-lg border border-muted p-4">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Listing count</p>
                   <p className="text-2xl font-semibold">{scrapeResult.listingCount}</p>
@@ -214,36 +254,62 @@ export function SearchSection() {
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Query type</p>
                   <p className="text-2xl font-semibold">{scrapeResult.mode.toUpperCase()}</p>
                 </div>
+                <div className="rounded-lg border border-muted p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Visible listings</p>
+                  <p className="text-2xl font-semibold">{sortedListings.length}</p>
+                </div>
               </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1 rounded-lg border border-muted p-4">
+                  <label className="text-sm font-medium text-slate-700">Urutkan</label>
+                  <select
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    value={sortBy}
+                    onChange={(event) => setSortBy(event.target.value as 'price' | 'area' | 'type')}
+                  >
+                    <option value="price">Harga</option>
+                    <option value="area">Area</option>
+                    <option value="type">Tipe Properti</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 rounded-lg border border-muted p-4">
+                  <label className="text-sm font-medium text-slate-700">Arah</label>
+                  <select
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    value={sortDirection}
+                    onChange={(event) => setSortDirection(event.target.value as 'asc' | 'desc')}
+                  >
+                    <option value="asc">Asc</option>
+                    <option value="desc">Desc</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 rounded-lg border border-muted p-4">
+                  <label className="text-sm font-medium text-slate-700">Filter tipe</label>
+                  <select
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    value={filterType}
+                    onChange={(event) => setFilterType(event.target.value)}
+                  >
+                    {propertyTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type === 'all' ? 'Semua tipe' : type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {scrapeResult.statistics && scrapeResult.statistics.length > 0 ? (
-                <div className="mt-6 space-y-4">
-                  {scrapeResult.statistics.find((stat) => stat.propertyType === 'all') ? (
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {[
-                        { label: 'Average price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.averagePrice },
-                        { label: 'Median price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.medianPrice },
-                        { label: 'Mode price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.modePrice },
-                        { label: 'Fair price', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.fairPrice },
-                        { label: 'Average size', value: scrapeResult.statistics.find((stat) => stat.propertyType === 'all')?.averageSizeSqft },
-                      ].map((stat) => (
-                        <div key={stat.label} className="rounded-lg border border-muted p-4">
-                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
-                          <p className="text-2xl font-semibold">
-                            {stat.value !== null && stat.value !== undefined ? (
-                              stat.label === 'Average size' ? `${stat.value} sqft` : `RM ${stat.value}`
-                            ) : (
-                              'N/A'
-                            )}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
+                <div className="mt-6 space-y-6">
+                  <StatisticsSummary statistics={scrapeResult.statistics} />
 
                   {scrapeResult.statistics.filter((stat) => stat.propertyType !== 'all').length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 rounded-lg border border-muted p-4">
                       <p className="text-sm font-semibold">Grouped statistics by property type</p>
-                      <div className="grid gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {scrapeResult.statistics
                           .filter((stat) => stat.propertyType !== 'all')
                           .map((stat) => (
@@ -252,6 +318,7 @@ export function SearchSection() {
                               <p className="text-xs text-muted-foreground">Listings: {stat.listingCount}</p>
                               <p className="text-sm">Avg: {stat.averagePrice !== null ? `RM ${stat.averagePrice}` : 'N/A'}</p>
                               <p className="text-sm">Median: {stat.medianPrice !== null ? `RM ${stat.medianPrice}` : 'N/A'}</p>
+                              <p className="text-sm">Fair: {stat.fairPrice !== null ? `RM ${stat.fairPrice}` : 'N/A'}</p>
                             </div>
                           ))}
                       </div>
@@ -259,14 +326,9 @@ export function SearchSection() {
                   ) : null}
                 </div>
               ) : null}
-              {scrapeResult.listings.slice(0, 3).map((listing) => (
-                <div key={listing.listing_url} className="rounded-lg border border-muted p-4">
-                  <p className="text-sm font-semibold text-foreground break-all">{listing.title}</p>
-                  <p className="text-xs text-muted-foreground">{listing.listing_url}</p>
-                  <p className="text-sm">Price: {listing.monthly_price ? `RM ${listing.monthly_price}` : 'Not Available'}</p>
-                  <p className="text-sm">Bedrooms: {listing.bedrooms}</p>
-                </div>
-              ))}
+              <div className="mt-6">
+                <ListingTable listings={scrapeResult.listings} />
+              </div>
             </div>
           </CardContent>
         </Card>
