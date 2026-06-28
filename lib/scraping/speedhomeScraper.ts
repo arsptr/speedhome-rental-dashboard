@@ -11,7 +11,7 @@ import {
 import { buildGroupedScrapeStatistics } from '@/lib/analytics/statistics';
 import type { ScrapeResult, ScrapedProperty } from '@/types/scraping';
 
-const SPEEDHOME_BASE_URL = 'https://www.speedhome.com.my';
+const SPEEDHOME_BASE_URL = 'https://www.speedhome.com';
 
 export function buildSpeedhomeSearchUrl(query: string): string {
   const trimmed = query.trim();
@@ -116,6 +116,12 @@ async function scrapeListingPage(listingUrl: string): Promise<ScrapedProperty> {
   });
 
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error(
+        `Failed to fetch listing page: 403 Forbidden. Listing page is being blocked by Cloudflare or the remote host.`,
+      );
+    }
+
     throw new Error(`Failed to fetch listing page: ${listingUrl}`);
   }
 
@@ -141,6 +147,12 @@ export async function scrapeSpeedhomePage(url: string, mode: 'url' | 'area' = 'u
   });
 
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error(
+        'Failed to fetch target page: 403 Forbidden. The target site appears to be blocking server-side scraping requests with Cloudflare protections.',
+      );
+    }
+
     throw new Error(`Failed to fetch target page: ${response.status} ${response.statusText}`);
   }
 
